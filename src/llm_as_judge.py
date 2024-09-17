@@ -9,11 +9,14 @@ from langchain_anthropic import ChatAnthropic
 from langgraph.graph import StateGraph, START, END
 from typing import Annotated, TypedDict, Sequence
 from langchain_core.messages import BaseMessage
+import yaml
+
+config = yaml.safe_load(open('config.yml'))
 
 load_dotenv()
 
 llm = ChatAnthropic(
-    model="claude-3-haiku-20240307", api_key=os.getenv("ANTHROPIC_API_KEY")
+    model=config.get("MODEL_NAME"), api_key=os.getenv("ANTHROPIC_API_KEY")
 )
 
 
