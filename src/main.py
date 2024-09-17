@@ -1,40 +1,25 @@
+import yaml
 import pandas as pd
+from helpers import read_graph
 from middleware import convert_edges_to_dag
+from llm_as_judge import run_validation_using_LLM
 from algorithm import improve_system
-from llm_as_judge import construct_validator_graph, State
+config = yaml.safe_load(open('config.yml'))
 
+app_edges = read_graph(path_to_json=config["PATH_TO_APPLICATION_GRAPH_JSON"])
 
-edges = []
+application_dag = convert_edges_to_dag(edges=app_edges)
 
-# Get LLM responses
-validator_graph = construct_validator_graph(State)
+# Read in dataset to evaluate
+app_responses = pd.read_excel(config["PATH_TO_APPLICATION_RESPONSES"])
 
-converted_graph = convert_edges_to_dag(edges=edges)
+# LLM as a judge
+if config["LLM_AS_A_JUDGE_MODE"]:
+    llm_response_df = run_validation_using_LLM(
+        dataframe=app_responses,
+        node_input_output_mappings=config["node_input_output_mappings"]
+    )
+else:
+    llm_response_df = pd.read_excel(config["PATH_TO_LLM_RESPONSES"])
 
-# mappings = [
-#     ('prompt-1', 'output-keywords'),
-#     ('prompt-2', 'output-article_search'),
-#     ('prompt-3', 'output-replies'),
-#     ('prompt-4', 'output-reply')
-#     ]
-
-# validations_dict = run_validation_using_LLM(
-#         graph=validator_graph,
-#         dataframe=input_output_df,
-#         prompt_response_mappings=mappings
-#     )
-
-data_llm_outputs = pd.read_excel(
-    "/Users/ankushgarg/Desktop/MIDS/epic-data-lab/validate-LLM-graphs/reddit-comments/llm-evals.xlsx"
-)
-data_llm_outputs.rename(
-    columns={
-        "check-1": "extract_keywords_from_title",
-        "check-2": "tool_search",
-        "check-3": "summarize_tone_sentiment_of_replies",
-        "check-4": "generate_reply",
-    },
-    inplace=True,
-)
-
-improve_system("generate_reply", data=data_llm_outputs, dag=converted_graph)
+improve_system(data=llm_response_df, dag=application_dag)
