@@ -16,6 +16,7 @@ class Node:
     def __repr__(self):
         return self.name
 
+
 @dataclass
 class Edge:
     source: str
@@ -23,11 +24,17 @@ class Edge:
     data: None
     conditional: None
 
+
 def convert_edges_to_dag(edges: List[Dict]) -> defaultdict:
     edges = [
-        Edge(source=edge['source'], target=edge['target'], data=edge.get("data", None), conditional=edge.get("conditional", None))
-          for edge in edges
-          ]
+        Edge(
+            source=edge["source"],
+            target=edge["target"],
+            data=edge.get("data", None),
+            conditional=edge.get("conditional", None),
+        )
+        for edge in edges
+    ]
     # Take the edges from Langgraph and create a parent/child relationship
     nodes = defaultdict(list)
 
@@ -41,7 +48,7 @@ def convert_edges_to_dag(edges: List[Dict]) -> defaultdict:
             node = nodes.get(edge.source, None)
             node.ending_node = True
             continue
-        
+
         if edge.source == "__start__":
             node = nodes.get(edge.target, None)
             node.starting_node = True
@@ -50,5 +57,5 @@ def convert_edges_to_dag(edges: List[Dict]) -> defaultdict:
         node = nodes.get(edge.target, None)
         parent_node = nodes.get(edge.source, None)
         node.add_parent(parent_node)
-    
+
     return nodes

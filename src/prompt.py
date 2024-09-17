@@ -13,5 +13,5 @@ def construct_prompt(input_, output_, validation_key="validation", reason_key="r
 
         Input: {input_}
         Output: {output_} """
-    
+
     return prompt
