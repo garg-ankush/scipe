@@ -1,0 +1,29 @@
+PATH_TO_APPLICATION_GRAPH_JSON: example-data/graph-healthcare.json
+PATH_TO_APPLICATION_RESPONSES: example-data/healthcare-responses.xlsx
+
+# Mode name to use for LLM validations
+MODEL_NAME: claude-3-haiku-20240307
+
+# Each node name, input and output columns must match the application responses
+node_input_output_mappings:
+  pii_name_number_email:
+    - prompt-1
+    - response-1
+  pii_id:
+    - prompt-1
+    - response-2
+  pii_birthdate:
+    - prompt-1
+    - response-3
+  pii_medications:
+    - prompt-1
+    - response-4
+  pii_insurance:
+    - prompt-1
+    - response-5
+  extractor:
+    - prompt-1
+    - response-6
+  summarizer:
+    - prompt-1
+    - response-7
