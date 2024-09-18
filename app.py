@@ -2,6 +2,7 @@ import yaml
 import json
 import pandas as pd
 from typing import Any
+import asyncio
 from src.middleware import convert_edges_to_dag
 from src.llm_as_judge import run_validations_using_llm
 from src.algorithm import find_problematic_node
@@ -60,14 +61,14 @@ class LanggraphImprover:
         if self.config["node_input_output_mappings"] is None:
             raise ValueError("You must update node input and output names in the Config file.")
         
-        llm_validations =  run_validations_using_llm(
+        llm_validations = asyncio.run(
+            run_validations_using_llm(
                 model_name=self.config["MODEL_NAME"],
                 dataframe=self.app_responses,
                 node_input_output_mappings=self.config["node_input_output_mappings"]
+                )
             )
         self.llm_validations = llm_validations
-
-        self.llm_validations.to_csv("testing.csv", index=None)
     
     def improve_system(self) -> Any:
         """

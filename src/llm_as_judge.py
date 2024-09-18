@@ -4,11 +4,11 @@ import uuid
 import operator
 from dotenv import load_dotenv  # type: ignore
 import pandas as pd
-from langchain_anthropic import ChatAnthropic
+import asyncio
 from langgraph.graph import StateGraph, START, END
 from typing import Annotated, TypedDict, Sequence
 from langchain_core.messages import BaseMessage
-from litellm import completion
+from litellm import acompletion
 from .prompt import construct_prompt
 
 
@@ -27,7 +27,7 @@ class JudgeLLM:
     def __init__(self, model_name: str):
         self.model_name = model_name
 
-    def validate_response(self, state: State):
+    async def validate_response(self, state: State):
         input = state["input"][-1]
         output = state["output"][-1]
 
@@ -37,7 +37,7 @@ class JudgeLLM:
             input, output, validation_key="validation", reason_key="reason"
         )
         # Make a call to any LLM that LiteLLM supports
-        response = completion(
+        response = await acompletion(
             model=self.model_name,
             messages=[{"role": "user", "content": constructed_prompt}],
             api_key=os.getenv("LLM_MODEL_API_KEY")
@@ -77,15 +77,13 @@ class JudgeLLM:
 
         return dataframe
     
-    def run(
+    async def run(
             self,
             dataframe: pd.DataFrame, node_input_output_mappings: dict[tuple]
         ) -> pd.DataFrame:
         graph = self.construct_validator_graph(State)
 
-        # TODO implement Async code for this
-        llm_evals = {}
-        for _, row in dataframe.iterrows():
+        async def process_row(row):
             json_data = row.to_dict()
             batch_id = json_data.get("batch_id", uuid.uuid4().hex)
 
@@ -95,24 +93,26 @@ class JudgeLLM:
                 prompt_text = json_data.get(prompt_key, None)
                 output_text = json_data.get(response_key, None)
 
-                evaluation_response = graph.invoke(
+                evaluation_response = await graph.ainvoke(
                     {
                         "input": [prompt_text],
                         "output": [output_text],
                         "node_name": [node_name],
                     }
                 )
-                
+            
                 input_output_evaluation.append(evaluation_response)
+            return batch_id, input_output_evaluation
 
-            llm_evals[batch_id] = input_output_evaluation
+        tasks = [process_row(row) for _, row in dataframe.iterrows()]
+        results = await asyncio.gather(*tasks)
+        llm_evals = dict(results)
+        return llm_evals
 
-        dataframe = self.convert_llm_responses_to_dataframe(llm_evals=llm_evals)
-        return dataframe
-
-def run_validations_using_llm(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
+async def run_validations_using_llm(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
     llm_judge = JudgeLLM(model_name=model_name)
-    return llm_judge.run(
+    evals = await llm_judge.run(
         dataframe=dataframe, 
         node_input_output_mappings=node_input_output_mappings
         )
+    return llm_judge.convert_llm_responses_to_dataframe(llm_evals=evals)
