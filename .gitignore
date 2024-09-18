@@ -20,3 +20,4 @@ build/lib/src/llm_as_judge.py
 build/lib/src/main.py
 build/lib/src/middleware.py
 build/lib/src/prompt.py
+test.py
