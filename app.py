@@ -61,7 +61,7 @@ class LanggraphImprover:
             raise ValueError("You must update node input and output names in the Config file.")
         
         llm_validations =  run_validations_using_llm(
-                llm_name=self.config["MODEL_NAME"],
+                model_name=self.config["MODEL_NAME"],
                 dataframe=self.app_responses,
                 node_input_output_mappings=self.config["node_input_output_mappings"]
             )

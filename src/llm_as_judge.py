@@ -8,6 +8,7 @@ from langchain_anthropic import ChatAnthropic
 from langgraph.graph import StateGraph, START, END
 from typing import Annotated, TypedDict, Sequence
 from langchain_core.messages import BaseMessage
+from litellm import completion
 from .prompt import construct_prompt
 
 
@@ -23,8 +24,8 @@ class State(TypedDict):
     reason: Annotated[Sequence[BaseMessage], operator.add]
 
 class JudgeLLM:
-    def __init__(self):
-        self.llm = None
+    def __init__(self, model_name: str):
+        self.model_name = model_name
 
     def validate_response(self, state: State):
         input = state["input"][-1]
@@ -35,11 +36,17 @@ class JudgeLLM:
         constructed_prompt = construct_prompt(
             input, output, validation_key="validation", reason_key="reason"
         )
+        # Make a call to any LLM that LiteLLM supports
+        response = completion(
+            model=self.model_name,
+            messages=[{"role": "user", "content": constructed_prompt}],
+            api_key=os.getenv("LLM_MODEL_API_KEY")
+            )
+        print(response)
+        
+        content = json.loads(response.choices[0].message.content)
 
-        response = self.llm.invoke(constructed_prompt)
-        content = json.loads(response.content)
-
-        return {"validation": [content.get("validation")], "reason": [content["reason"]]}
+        return {"output": [output], "validation": [content.get("validation")], "reason": [content.get("reason")]}
 
     def construct_validator_graph(self, State):
         graph = StateGraph(State)
@@ -72,10 +79,8 @@ class JudgeLLM:
     
     def run(
             self,
-            llm_name: str,
             dataframe: pd.DataFrame, node_input_output_mappings: dict[tuple]
         ) -> pd.DataFrame:
-        self.llm = ChatAnthropic(model=llm_name, api_key=os.getenv("ANTHROPIC_API_KEY"))
         graph = self.construct_validator_graph(State)
 
         # TODO implement Async code for this
@@ -105,10 +110,9 @@ class JudgeLLM:
         dataframe = self.convert_llm_responses_to_dataframe(llm_evals=llm_evals)
         return dataframe
 
-def run_validations_using_llm(llm_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
-    llm_judge = JudgeLLM()
+def run_validations_using_llm(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
+    llm_judge = JudgeLLM(model_name=model_name)
     return llm_judge.run(
-        llm_name=llm_name,
         dataframe=dataframe, 
         node_input_output_mappings=node_input_output_mappings
         )
