@@ -4,11 +4,10 @@ import uuid
 import operator
 from dotenv import load_dotenv  # type: ignore
 import pandas as pd
-import asyncio
 from langgraph.graph import StateGraph, START, END
-from typing import Annotated, Dict, List, Tuple, TypedDict, Sequence
+from typing import Annotated, TypedDict, Sequence
 from langchain_core.messages import BaseMessage
-from litellm import acompletion
+from litellm import completion
 from .prompt import construct_prompt
 
 
@@ -24,12 +23,10 @@ class State(TypedDict):
     reason: Annotated[Sequence[BaseMessage], operator.add]
 
 class JudgeLLM:
-    def __init__(self, model_name: str, batch_size: int, sleep_interval: float):
+    def __init__(self, model_name: str):
         self.model_name = model_name
-        self.batch_size = batch_size
-        self.sleep_interval = sleep_interval
 
-    async def validate_response(self, state: State):
+    def validate_response(self, state: State):
         input = state["input"][-1]
         output = state["output"][-1]
 
@@ -39,7 +36,7 @@ class JudgeLLM:
             input, output, validation_key="validation", reason_key="reason"
         )
         # Make a call to any LLM that LiteLLM supports
-        response = await acompletion(
+        response = completion(
             model=self.model_name,
             messages=[{"role": "user", "content": constructed_prompt}],
             api_key=os.getenv("LLM_MODEL_API_KEY")
@@ -77,59 +74,41 @@ class JudgeLLM:
 
         return dataframe
     
-    async def run(
+    def run(
             self,
             dataframe: pd.DataFrame, node_input_output_mappings: dict[tuple]
         ) -> pd.DataFrame:
         graph = self.construct_validator_graph(State)
 
-        async def process_chunk(chunk: pd.DataFrame) -> List[Tuple[str, List[Dict]]]:
-            async def process_row(row):
-                json_data = row.to_dict()
-                batch_id = json_data.get("batch_id", uuid.uuid4().hex)
+        def process_row(row):
+            json_data = row.to_dict()
+            batch_id = json_data.get("batch_id", uuid.uuid4().hex)
 
-                input_output_evaluation = []
-                for node_name, mappings in node_input_output_mappings.items():
-                    prompt_key, response_key = mappings
-                    prompt_text = json_data.get(prompt_key, None)
-                    output_text = json_data.get(response_key, None)
+            input_output_evaluation = []
+            for node_name, mappings in node_input_output_mappings.items():
+                prompt_key, response_key = mappings
+                prompt_text = json_data.get(prompt_key, None)
+                output_text = json_data.get(response_key, None)
 
-                    evaluation_response = await graph.ainvoke(
-                        {
-                            "input": [prompt_text],
-                            "output": [output_text],
-                            "node_name": [node_name],
-                        }
-                    )
-                
-                    input_output_evaluation.append(evaluation_response)
-                return batch_id, input_output_evaluation
-
-            tasks = [process_row(row) for _, row in dataframe.iterrows()]
-            return await asyncio.gather(*tasks)
-        
-        # Split the dataframe into chunks. This way we won't overwhelm the LLM
-        chunks = [dataframe[i: i + self.batch_size] for i in range(0, len(dataframe), self.batch_size)]
-
-        all_results = []
-        for index, chunk in enumerate(chunks):
-            if index > 0:
-                print(f"Sleeping for {self.sleep_interval} seconds...")
-                await asyncio.sleep(self.sleep_interval)
+                evaluation_response = graph.invoke(
+                    {
+                        "input": [prompt_text],
+                        "output": [output_text],
+                        "node_name": [node_name],
+                    }
+                )
             
-            chunk_results = await process_chunk(chunk)
-            all_results.extend(chunk_results)
+                input_output_evaluation.append(evaluation_response)
+            return batch_id, input_output_evaluation
 
-        llm_evals = dict(all_results)
+        results = [process_row(row) for _, row in dataframe.iterrows()]
+        llm_evals = dict(results)
         return llm_evals
 
-async def run_validations_using_llm(config: dict, dataframe=pd.DataFrame, node_input_output_mappings=dict):
-    llm_judge = JudgeLLM(
-        model_name=config['MODEL_NAME'],
-        batch_size=config["BATCH_SIZE"],
-        sleep_interval=config["SLEEP_INTERVAL"]
-        )
-    evals = await llm_judge.run(
+def run_validations_using_llm(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
+    llm_judge = JudgeLLM(model_name=model_name)
+    
+    evals = llm_judge.run(
         dataframe=dataframe, 
         node_input_output_mappings=node_input_output_mappings
         )

@@ -6,7 +6,6 @@ SCIPE is a powerful tool for evaluating and diagnosing LLM (Large Language Model
 - Diagnoses problematic nodes in LLM graphs
 - Provides failure rates of different nodes
 - Supports various LLM frameworks (uses [LiteLLM](https://github.com/BerriAI/litellm) underneath the hood)
-- LLM evaluation is asynchronous
 
 ### Why Use SCIPE?
 As AI application developers, we often overlook the critical step of evaluating LLM chains during the building phase. SCIPE simplifies this process by allowing developers to run their minimum set of prompts and responses (we recommend atleast 10 examples) through the tool. Within minutes, SCIPE reports back the problematic node in the LLM graph, enabling rapid identification and resolution of issues.
