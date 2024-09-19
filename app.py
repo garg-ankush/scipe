@@ -1,5 +1,6 @@
 import yaml
 import json
+import os
 import pandas as pd
 from typing import Any
 import asyncio
@@ -15,6 +16,7 @@ class LanggraphImprover:
         Args:
             config_path (str): Path to YAML configuration file
         """
+        self.config_dir = os.path.dirname(config_path)
         self.config = self._load_config(config_path)
         self.application_dag = None
         self.app_responses = None
@@ -34,8 +36,11 @@ class LanggraphImprover:
         """
         Load application graph (converted to json)
         """
-        with open(self.config["PATH_TO_APPLICATION_GRAPH_JSON"], "r") as json_file:
+        json_path = os.path.join(self.config_dir, self.config['PATH_TO_APPLICATION_GRAPH_JSON'])
+        
+        with open(json_path, "r") as json_file:
             graph_json = json.load(json_file)
+        
         edges = graph_json["edges"]
         self.application_dag = convert_edges_to_dag(edges=edges)
 
@@ -43,14 +48,15 @@ class LanggraphImprover:
         """
         Load application input/outputs to validate using an LLM
         """
-        if self.config["PATH_TO_APPLICATION_RESPONSES"].split(".")[-1] == "csv":
-            self.app_responses = pd.read_csv(self.config["PATH_TO_APPLICATION_RESPONSES"])
+        responses_path = os.path.join(self.config_dir, self.config["PATH_TO_APPLICATION_RESPONSES"])
+
+        if responses_path.split(".")[-1] == "csv":
+            self.app_responses = pd.read_csv(responses_path)
             return
 
-        data = pd.read_excel(self.config["PATH_TO_APPLICATION_RESPONSES"])
-        self.app_responses = data.tail(1).reset_index(drop=True)
+        self.app_responses = pd.read_excel(responses_path)
 
-    def run_llm_validation(self) -> None:
+    async def run_llm_validation(self) -> None:
         """
         Run LLM validation on the application responses
 
@@ -61,13 +67,12 @@ class LanggraphImprover:
         if self.config["node_input_output_mappings"] is None:
             raise ValueError("You must update node input and output names in the Config file.")
         
-        llm_validations = asyncio.run(
-            run_validations_using_llm(
+        llm_validations = await run_validations_using_llm(
                 model_name=self.config["MODEL_NAME"],
                 dataframe=self.app_responses,
                 node_input_output_mappings=self.config["node_input_output_mappings"]
                 )
-            )
+            
         self.llm_validations = llm_validations
     
     def improve_system(self) -> Any:
@@ -83,13 +88,13 @@ class LanggraphImprover:
         return find_problematic_node(data=self.llm_validations, dag=self.application_dag)
     
 
-    def improve(self):
+    async def improve(self):
         """
         Put all the functions together
         """
         self.load_application_graph()
         self.load_application_responses()
-        self.run_llm_validation()
+        await self.run_llm_validation()
         self.improve_system()
         
 

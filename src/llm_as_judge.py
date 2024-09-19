@@ -41,9 +41,7 @@ class JudgeLLM:
             model=self.model_name,
             messages=[{"role": "user", "content": constructed_prompt}],
             api_key=os.getenv("LLM_MODEL_API_KEY")
-            )
-        print(response)
-        
+            )        
         content = json.loads(response.choices[0].message.content)
 
         return {"output": [output], "validation": [content.get("validation")], "reason": [content.get("reason")]}
