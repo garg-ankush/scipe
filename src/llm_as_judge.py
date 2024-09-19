@@ -24,10 +24,10 @@ class State(TypedDict):
     reason: Annotated[Sequence[BaseMessage], operator.add]
 
 class JudgeLLM:
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, batch_size: int, sleep_interval: float):
         self.model_name = model_name
-        self.batch_size: int = 5
-        self.sleep_interval: float = 3.0
+        self.batch_size = batch_size
+        self.sleep_interval = sleep_interval
 
     async def validate_response(self, state: State):
         input = state["input"][-1]
@@ -123,8 +123,12 @@ class JudgeLLM:
         llm_evals = dict(all_results)
         return llm_evals
 
-async def run_validations_using_llm(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
-    llm_judge = JudgeLLM(model_name=model_name)
+async def run_validations_using_llm(config: dict, dataframe=pd.DataFrame, node_input_output_mappings=dict):
+    llm_judge = JudgeLLM(
+        model_name=config['MODEL_NAME'],
+        batch_size=config["BATCH_SIZE"],
+        sleep_interval=config["SLEEP_INTERVAL"]
+        )
     evals = await llm_judge.run(
         dataframe=dataframe, 
         node_input_output_mappings=node_input_output_mappings
