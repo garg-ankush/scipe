@@ -3,12 +3,6 @@ src/__pycache__
 build
 scipe.egg-info
 .env
-example-data/graph-healthcare.json
-example-data/graph-reddit.json
-example-data/healthcare-responses.xlsx
-example-data/llm-evals-healthcare.xlsx
-example-data/llm-evals-reddit.xlsx
-example-data/reddit-responses.xlsx
 scipe.egg-info/dependency_links.txt
 scipe.egg-info/PKG-INFO
 scipe.egg-info/requires.txt
