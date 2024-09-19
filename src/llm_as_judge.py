@@ -6,7 +6,7 @@ from dotenv import load_dotenv  # type: ignore
 import pandas as pd
 import asyncio
 from langgraph.graph import StateGraph, START, END
-from typing import Annotated, TypedDict, Sequence
+from typing import Annotated, Dict, List, Tuple, TypedDict, Sequence
 from langchain_core.messages import BaseMessage
 from litellm import acompletion
 from .prompt import construct_prompt
@@ -26,6 +26,8 @@ class State(TypedDict):
 class JudgeLLM:
     def __init__(self, model_name: str):
         self.model_name = model_name
+        self.batch_size: int = 5
+        self.sleep_interval: float = 3.0
 
     async def validate_response(self, state: State):
         input = state["input"][-1]
@@ -81,30 +83,44 @@ class JudgeLLM:
         ) -> pd.DataFrame:
         graph = self.construct_validator_graph(State)
 
-        async def process_row(row):
-            json_data = row.to_dict()
-            batch_id = json_data.get("batch_id", uuid.uuid4().hex)
+        async def process_chunk(chunk: pd.DataFrame) -> List[Tuple[str, List[Dict]]]:
+            async def process_row(row):
+                json_data = row.to_dict()
+                batch_id = json_data.get("batch_id", uuid.uuid4().hex)
 
-            input_output_evaluation = []
-            for node_name, mappings in node_input_output_mappings.items():
-                prompt_key, response_key = mappings
-                prompt_text = json_data.get(prompt_key, None)
-                output_text = json_data.get(response_key, None)
+                input_output_evaluation = []
+                for node_name, mappings in node_input_output_mappings.items():
+                    prompt_key, response_key = mappings
+                    prompt_text = json_data.get(prompt_key, None)
+                    output_text = json_data.get(response_key, None)
 
-                evaluation_response = await graph.ainvoke(
-                    {
-                        "input": [prompt_text],
-                        "output": [output_text],
-                        "node_name": [node_name],
-                    }
-                )
+                    evaluation_response = await graph.ainvoke(
+                        {
+                            "input": [prompt_text],
+                            "output": [output_text],
+                            "node_name": [node_name],
+                        }
+                    )
+                
+                    input_output_evaluation.append(evaluation_response)
+                return batch_id, input_output_evaluation
+
+            tasks = [process_row(row) for _, row in dataframe.iterrows()]
+            return await asyncio.gather(*tasks)
+        
+        # Split the dataframe into chunks. This way we won't overwhelm the LLM
+        chunks = [dataframe[i: i + self.batch_size] for i in range(0, len(dataframe), self.batch_size)]
+
+        all_results = []
+        for index, chunk in enumerate(chunks):
+            if index > 0:
+                print(f"Sleeping for {self.sleep_interval} seconds...")
+                await asyncio.sleep(self.sleep_interval)
             
-                input_output_evaluation.append(evaluation_response)
-            return batch_id, input_output_evaluation
+            chunk_results = await process_chunk(chunk)
+            all_results.extend(chunk_results)
 
-        tasks = [process_row(row) for _, row in dataframe.iterrows()]
-        results = await asyncio.gather(*tasks)
-        llm_evals = dict(results)
+        llm_evals = dict(all_results)
         return llm_evals
 
 async def run_validations_using_llm(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
