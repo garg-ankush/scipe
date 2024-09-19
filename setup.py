@@ -19,5 +19,6 @@ setup(
         "pandas==2.2.2",
         "python-dotenv==1.0.1",
         "openpyxl==3.1.5",
+        "litellm==1.46.5"
     ],
 )
