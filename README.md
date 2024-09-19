@@ -6,7 +6,6 @@ SCIPE is a powerful tool for evaluating and diagnosing LLM (Large Language Model
 - Diagnoses problematic nodes in LLM graphs
 - Provides failure rates of different nodes
 - Supports various LLM frameworks (uses [LiteLLM](https://github.com/BerriAI/litellm) underneath the hood)
-- LLM evaluation is asynchronous
 
 ### Why Use SCIPE?
 As AI application developers, we often overlook the critical step of evaluating LLM chains during the building phase. SCIPE simplifies this process by allowing developers to run their minimum set of prompts and responses (we recommend atleast 10 examples) through the tool. Within minutes, SCIPE reports back the problematic node in the LLM graph, enabling rapid identification and resolution of issues.
@@ -15,12 +14,22 @@ As AI application developers, we often overlook the critical step of evaluating 
 ```python
 pip install scipe
 ```
-### Usage
+### Getting Started
+You should have a compiled graph (from [Langgraph](https://langchain-ai.github.io/langgraph/tutorials/introduction/)) that you've been using for your LLM application. You should also, save the graph down as json by running the following. We'll use the nodes and edges of this graph soon. We have a couple of examples in the `examples_data` folder for you to try out.
+
+```python
+import json
+with open("graph.json", "r") as file:
+    json.dumps(compiled_graph.to_json(), file)
+```
+
 ```python
 from scipe import LanggraphImprover
 improver = LanggraphImprover(f"{PATH_TO_CONFIG_YAML}")
-await improver.improve()
+improver.improve()
 ```
+The `improve` method traverses through the graph to figure out which node has the highest failure rate. Once it finds the failure node, it prints it's failure probability to the console.
+
 ### Configuration
 SCIPE uses a YAML configuration file to set up your LLM graph evaluation. Here's an example of what your config.yaml might look like:
 

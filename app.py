@@ -3,7 +3,6 @@ import json
 import os
 import pandas as pd
 from typing import Any
-import asyncio
 from src.middleware import convert_edges_to_dag
 from src.llm_as_judge import run_validations_using_llm
 from src.algorithm import find_problematic_node
@@ -56,7 +55,7 @@ class LanggraphImprover:
 
         self.app_responses = pd.read_excel(responses_path)
 
-    async def run_llm_validation(self) -> None:
+    def run_llm_validation(self) -> None:
         """
         Run LLM validation on the application responses
 
@@ -67,7 +66,7 @@ class LanggraphImprover:
         if self.config["node_input_output_mappings"] is None:
             raise ValueError("You must update node input and output names in the Config file.")
         
-        llm_validations = await run_validations_using_llm(
+        llm_validations = run_validations_using_llm(
                 model_name=self.config["MODEL_NAME"],
                 dataframe=self.app_responses,
                 node_input_output_mappings=self.config["node_input_output_mappings"]
@@ -88,13 +87,13 @@ class LanggraphImprover:
         return find_problematic_node(data=self.llm_validations, dag=self.application_dag)
     
 
-    async def improve(self):
+    def improve(self):
         """
         Put all the functions together
         """
         self.load_application_graph()
         self.load_application_responses()
-        await self.run_llm_validation()
+        self.run_llm_validation()
         self.improve_system()
         
 
