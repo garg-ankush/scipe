@@ -3,9 +3,9 @@ import json
 import os
 import pandas as pd
 from typing import Any
-from src.middleware import convert_edges_to_dag
-from src.llm_as_judge import run_validations_using_llm
-from src.algorithm import find_problematic_node
+from .middleware import convert_edges_to_dag
+from .llm_as_judge import run_validations_using_llm
+from .algorithm import find_problematic_node
 
 class LanggraphImprover:
     def __init__(self, config_path: str):
