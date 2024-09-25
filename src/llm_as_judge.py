@@ -101,22 +101,19 @@ class JudgeLLM:
 
             return batch_id, evaluations
 
-        async def process_all_rows():
-            results = []
-            for _, row in tqdm(dataframe.iterrows(), total=len(dataframe), desc="LLM Evals"):
-                result = await process_row(row)
-                results.append(result)
-            return results
-        
-        # Sometimes this gets called from a command line and other times from a notebook environment
-        # This try catch loop covers both cases.
+        results = []
+    
+        # Create a new event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            results = asyncio.run(process_all_rows())
-        else:
-            results = loop.run_until_complete(process_all_rows())
-        
+            for _, row in tqdm(dataframe.iterrows(), total=len(dataframe), desc="LLM Evals"):
+                result = loop.run_until_complete(process_row(row))
+                results.append(result)
+        finally:
+            loop.close()
+
         return dict(results)
 
 def run_validations(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
