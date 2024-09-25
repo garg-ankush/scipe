@@ -1,4 +1,4 @@
-PATH_TO_SAVE_VALIDATIONS: "output.validations.csv"
+PATH_TO_SAVE_VALIDATIONS: "validations.csv"
 
 # Mode name to use for LLM validations
 MODEL_NAME: claude-3-haiku-20240307
