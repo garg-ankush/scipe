@@ -49,7 +49,7 @@ class LLMEvaluator:
                 node_input_output_mappings=self.config["node_input_output_mappings"]
                 )
         # Save these down in case the user wants to use them again
-        llm_validations.to_csv(self.config["PATH_TO_SAVE_VALIDATIONS"], index=None)
+        llm_validations.to_csv(f"{self.config_dir}/{self.config["PATH_TO_SAVE_VALIDATIONS"]}", index=None)
 
         self.llm_validations = llm_validations
         return self
