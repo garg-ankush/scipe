@@ -8,6 +8,7 @@ from langgraph.graph import StateGraph, START, END
 from typing import Annotated, TypedDict, Sequence
 from langchain_core.messages import BaseMessage
 from litellm import completion
+from tqdm import tqdm
 from .prompt import construct_prompt
 
 
@@ -74,9 +75,10 @@ class JudgeLLM:
 
         return dataframe
     
-    def run(
+    def judge(
             self,
-            dataframe: pd.DataFrame, node_input_output_mappings: dict[tuple]
+            dataframe: pd.DataFrame,
+            node_input_output_mappings: dict[tuple]
         ) -> pd.DataFrame:
         graph = self.construct_validator_graph(State)
 
@@ -101,14 +103,17 @@ class JudgeLLM:
                 input_output_evaluation.append(evaluation_response)
             return batch_id, input_output_evaluation
 
-        results = [process_row(row) for _, row in dataframe.iterrows()]
+        results = []
+        for _, row in tqdm(dataframe.iterrows(), desc="LLM Evals"):
+            results.append(process_row(row))
+
         llm_evals = dict(results)
         return llm_evals
 
-def run_validations_using_llm(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
+def run_validations(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
     llm_judge = JudgeLLM(model_name=model_name)
     
-    evals = llm_judge.run(
+    evals = llm_judge.judge(
         dataframe=dataframe, 
         node_input_output_mappings=node_input_output_mappings
         )
