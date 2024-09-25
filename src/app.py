@@ -2,26 +2,28 @@ import yaml
 import json
 import os
 import pandas as pd
-from typing import Any
-from .middleware import convert_edges_to_dag
-from .llm_as_judge import run_validations_using_llm
+from typing import Any, Dict
+from collections import defaultdict
+from .llm_as_judge import run_validations
 from .algorithm import find_problematic_node
 
-class LanggraphImprover:
-    def __init__(self, config_path: str):
-        """
-        Initialize Langgraph Improver with a config file
+
+class LLMEvaluator:
+    def __init__(self, config_path: str, responses: pd.DataFrame, application_dag: defaultdict):
+        """LLM Evaluator for running LLM-based evaluations on application data
 
         Args:
-            config_path (str): Path to YAML configuration file
+            config_path (str): Path to the config file
+            responses (pd.DataFrame): Dataframe of responses from an application
+            application_dag (defaultdict): Application dag with parent/child relationship
         """
         self.config_dir = os.path.dirname(config_path)
         self.config = self._load_config(config_path)
-        self.application_dag = None
-        self.app_responses = None
-        self.llm_validations = None
+        self.responses = responses
+        self.application_dag = application_dag
+        self._validations = None
 
-    def _load_config(self, config_path: str):
+    def _load_config(self, config_path: str) -> Dict[str, Any]:
         """
         Load and return configs from a YAML file
 
@@ -30,32 +32,8 @@ class LanggraphImprover:
         """
         with open(config_path, 'r') as config_file:
             return yaml.safe_load(config_file)
-        
-    def load_application_graph(self) -> None:
-        """
-        Load application graph (converted to json)
-        """
-        json_path = os.path.join(self.config_dir, self.config['PATH_TO_APPLICATION_GRAPH_JSON'])
-        
-        with open(json_path, "r") as json_file:
-            graph_json = json.load(json_file)
-        
-        edges = graph_json["edges"]
-        self.application_dag = convert_edges_to_dag(edges=edges)
 
-    def load_application_responses(self) -> None:
-        """
-        Load application input/outputs to validate using an LLM
-        """
-        responses_path = os.path.join(self.config_dir, self.config["PATH_TO_APPLICATION_RESPONSES"])
-
-        if responses_path.split(".")[-1] == "csv":
-            self.app_responses = pd.read_csv(responses_path)
-            return
-
-        self.app_responses = pd.read_excel(responses_path)
-
-    def run_llm_validation(self) -> None:
+    def run_validation(self) -> None:
         """
         Run LLM validation on the application responses
 
@@ -66,15 +44,18 @@ class LanggraphImprover:
         if self.config["node_input_output_mappings"] is None:
             raise ValueError("You must update node input and output names in the Config file.")
         
-        llm_validations = run_validations_using_llm(
+        llm_validations = run_validations(
                 model_name=self.config["MODEL_NAME"],
-                dataframe=self.app_responses,
+                dataframe=self.responses,
                 node_input_output_mappings=self.config["node_input_output_mappings"]
                 )
-            
+        # Save these down in case the user wants to use them again
+        llm_validations.to_csv(self.config["PATH_TO_SAVE_VALIDATIONS"], index=None)
+
         self.llm_validations = llm_validations
+        return self
     
-    def improve_system(self) -> Any:
+    def find_problematic_node(self) -> Any:
         """
         Improve the system by running an algorithm on top of LLM or Human responses
 
@@ -85,15 +66,5 @@ class LanggraphImprover:
             raise ValueError("Validations and application graph must be loaded before finding the problematic node.")
         
         return find_problematic_node(data=self.llm_validations, dag=self.application_dag)
-    
-
-    def improve(self):
-        """
-        Put all the functions together
-        """
-        self.load_application_graph()
-        self.load_application_responses()
-        self.run_llm_validation()
-        self.improve_system()
         
 
