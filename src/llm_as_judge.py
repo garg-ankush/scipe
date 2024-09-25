@@ -9,7 +9,6 @@ from typing import Annotated, TypedDict, Sequence
 from langchain_core.messages import BaseMessage
 from litellm import completion
 from tqdm.auto import tqdm
-import asyncio
 from .prompt import construct_prompt
 
 
@@ -83,7 +82,7 @@ class JudgeLLM:
         ) -> pd.DataFrame:
         graph = self.construct_validator_graph(State)
 
-        async def process_row(row):
+        def process_row(row):
             json_data = row.to_dict()
             batch_id = json_data.get("batch_id", uuid.uuid4().hex)
             evaluations = []
@@ -92,7 +91,7 @@ class JudgeLLM:
                 prompt_text = json_data.get(prompt_key, None)
                 output_text = json_data.get(response_key, None)
 
-                evaluation = await graph.ainvoke({
+                evaluation = graph.invoke({
                     "input": [prompt_text],
                     "output": [output_text],
                     "node_name": [node_name],
@@ -102,17 +101,9 @@ class JudgeLLM:
             return batch_id, evaluations
 
         results = []
-    
-        # Create a new event loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        try:
-            for _, row in tqdm(dataframe.iterrows(), total=len(dataframe), desc="LLM Evals"):
-                result = loop.run_until_complete(process_row(row))
-                results.append(result)
-        finally:
-            loop.close()
+        for _, row in tqdm(dataframe.iterrows(), total=len(dataframe), desc="LLM Evals"):
+            result = process_row(row)
+            results.append(result)
 
         return dict(results)
 
