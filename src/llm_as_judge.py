@@ -8,7 +8,7 @@ from langgraph.graph import StateGraph, START, END
 from typing import Annotated, TypedDict, Sequence
 from langchain_core.messages import BaseMessage
 from litellm import completion
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from .prompt import construct_prompt
 
 
