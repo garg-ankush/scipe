@@ -68,6 +68,6 @@ class LLMEvaluator:
         if self.llm_validations is None:
             raise ValueError("LLM Validations must be run looking for the problematic node.")
         
-        return find_problematic_node(data=self.llm_validations, dag=self.graph)
+        return find_problematic_node(data=self.llm_validations, graph=self.graph)
         
 
