@@ -9,6 +9,7 @@ from typing import Annotated, TypedDict, Sequence
 from langchain_core.messages import BaseMessage
 from litellm import completion
 from tqdm.auto import tqdm
+import asyncio
 from .prompt import construct_prompt
 
 
@@ -82,30 +83,37 @@ class JudgeLLM:
         ) -> pd.DataFrame:
         graph = self.construct_validator_graph(State)
 
-        def process_row(row):
+        async def process_node(json_data, node_name, mappings):
+            prompt_key, response_key = mappings
+            prompt_text = json_data.get(prompt_key, None)
+            output_text = json_data.get(response_key, None)
+
+            return await graph.ainvoke(
+                                {
+                                    "input": [prompt_text],
+                                    "output": [output_text],
+                                    "node_name": [node_name],
+                                }
+                            )
+
+        async def process_row(row):
             json_data = row.to_dict()
             batch_id = json_data.get("batch_id", uuid.uuid4().hex)
 
-            input_output_evaluation = []
-            for node_name, mappings in node_input_output_mappings.items():
-                prompt_key, response_key = mappings
-                prompt_text = json_data.get(prompt_key, None)
-                output_text = json_data.get(response_key, None)
+            tasks = [
+                process_node(json_data, node_name, mappings)
+                for node_name, mappings in node_input_output_mappings.items()
+            ]
 
-                evaluation_response = graph.invoke(
-                    {
-                        "input": [prompt_text],
-                        "output": [output_text],
-                        "node_name": [node_name],
-                    }
-                )
-            
-                input_output_evaluation.append(evaluation_response)
+            input_output_evaluation = await asyncio.gather(*tasks)
+
             return batch_id, input_output_evaluation
 
         results = []
+        loop = asyncio.get_event_loop()
         for _, row in tqdm(dataframe.iterrows(), total=len(dataframe), desc="LLM Evals"):
-            results.append(process_row(row))
+            result = loop.run_until_complete(process_row(row))
+            results.append(result)
 
         llm_evals = dict(results)
         return llm_evals
