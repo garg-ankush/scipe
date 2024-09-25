@@ -83,40 +83,41 @@ class JudgeLLM:
         ) -> pd.DataFrame:
         graph = self.construct_validator_graph(State)
 
-        async def process_node(json_data, node_name, mappings):
-            prompt_key, response_key = mappings
-            prompt_text = json_data.get(prompt_key, None)
-            output_text = json_data.get(response_key, None)
-
-            return await graph.ainvoke(
-                                {
-                                    "input": [prompt_text],
-                                    "output": [output_text],
-                                    "node_name": [node_name],
-                                }
-                            )
-
         async def process_row(row):
             json_data = row.to_dict()
             batch_id = json_data.get("batch_id", uuid.uuid4().hex)
+            evaluations = []
 
-            tasks = [
-                process_node(json_data, node_name, mappings)
-                for node_name, mappings in node_input_output_mappings.items()
-            ]
+            for node_name, (prompt_key, response_key) in node_input_output_mappings.items():
+                prompt_text = json_data.get(prompt_key, None)
+                output_text = json_data.get(response_key, None)
 
-            input_output_evaluation = await asyncio.gather(*tasks)
+                evaluation = await graph.ainvoke({
+                    "input": [prompt_text],
+                    "output": [output_text],
+                    "node_name": [node_name],
+                })
+                evaluations.append(evaluation)
 
-            return batch_id, input_output_evaluation
+            return batch_id, evaluations
 
-        results = []
-        loop = asyncio.get_event_loop()
-        for _, row in tqdm(dataframe.iterrows(), total=len(dataframe), desc="LLM Evals"):
-            result = loop.run_until_complete(process_row(row))
-            results.append(result)
-
-        llm_evals = dict(results)
-        return llm_evals
+        async def process_all_rows():
+            results = []
+            for _, row in tqdm(dataframe.iterrows(), total=len(dataframe), desc="LLM Evals"):
+                result = await process_row(row)
+                results.append(result)
+            return results
+        
+        # Sometimes this gets called from a command line and other times from a notebook environment
+        # This try catch loop covers both cases.
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            results = asyncio.run(process_all_rows())
+        else:
+            results = loop.run_until_complete(process_all_rows())
+        
+        return dict(results)
 
 def run_validations(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
     llm_judge = JudgeLLM(model_name=model_name)
