@@ -1031,3 +1031,4 @@ test.py
 .scipe_env/lib/python3.12/site-packages/pip-24.0.dist-info/REQUESTED
 .scipe_env/lib/python3.12/site-packages/pip-24.0.dist-info/top_level.txt
 .scipe_env/lib/python3.12/site-packages/pip-24.0.dist-info/WHEEL
+validations.csv
