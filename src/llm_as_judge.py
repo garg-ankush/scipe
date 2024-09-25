@@ -104,7 +104,7 @@ class JudgeLLM:
             return batch_id, input_output_evaluation
 
         results = []
-        for _, row in tqdm(dataframe.iterrows(), desc="LLM Evals"):
+        for _, row in tqdm(dataframe.iterrows(), total=len(dataframe), desc="LLM Evals"):
             results.append(process_row(row))
 
         llm_evals = dict(results)
