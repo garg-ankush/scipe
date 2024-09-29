@@ -1,4 +1,5 @@
 # SCIPE - Systematic Chain Improvement and Problem Evaluation
+### It helps you find bad nodes in LLM chains.
 
 SCIPE is a powerful tool for evaluating and diagnosing LLM (Large Language Model) graphs or chains. It assesses LLM responses and employs a custom algorithm to identify problematic nodes within the LLM chain.
 
@@ -6,46 +7,84 @@ SCIPE is a powerful tool for evaluating and diagnosing LLM (Large Language Model
 
 - Evaluates LLM responses within simple LLM Graphs (mainly [LangGraph](https://langchain-ai.github.io/langgraph/))
 - Diagnoses problematic nodes in LLM graphs
-- Provides failure rates of different nodes
+- Provides failure rates of various nodes that make up the LLM chain/graph
 - Supports various LLM frameworks (uses [LiteLLM](https://github.com/BerriAI/litellm) underneath the hood)
 
-### Why Use SCIPE?
+## Why Use SCIPE?
 
 As AI application developers, we often overlook the critical step of evaluating LLM chains during the building phase. SCIPE simplifies this process by allowing developers to run their minimum set of prompts and responses (we recommend atleast 10 examples) through the tool. Within minutes, SCIPE reports back the problematic node in the LLM graph, enabling rapid identification and resolution of issues.
 
-### Installation
+## Installation
 
 ```python
 pip install scipe
 ```
 
-### Getting Started
+## Getting Started
 
-You should have a compiled graph (from [Langgraph](https://langchain-ai.github.io/langgraph/tutorials/introduction/)) that you've been using for your LLM application. You should also, save the graph down as json by running the following. We'll use the nodes and edges of this graph soon. We have a couple of examples in the `examples_data` folder for you to try out.
+You should have a compiled graph (from [Langgraph](https://langchain-ai.github.io/langgraph/tutorials/introduction/)) that you've been using for your LLM application. We'll use the nodes and edges of this graph soon. We also have a couple of examples in the `examples_data` folder for you to try out.
+
+We'll read the saved (and compiled) Langgraph using the following and convert the format to a simpler DAG which we'll feed into SCIPE.
 
 ```python
-import json
-with open("graph.json", "r") as file:
-    json.dumps(compiled_graph.to_json(), file)
+from scipe.middleware import convert_edges_to_dag
+
+with open("graph-healthcare.json", 'r') as f:
+    example_graph = json.load(f)['edges'] # We only need the edges
+
+example_graph = convert_edges_to_dag(example_graph)
 ```
 
 ```python
 from scipe import LanggraphImprover
-improver = LanggraphImprover(f"{PATH_TO_CONFIG_YAML}")
-improver.improve()
+
+evaluator = LLMEvaluator(
+  config_path="config.yml",
+  responses=data,
+  graph=example_graph
+)
+
+results = evaluator.run_validation().find_problematic_node()
 ```
 
-The `improve` method traverses through the graph to figure out which node has the highest failure rate. Once it finds the failure node, it prints it's failure probability to the console.
+The `run_validation()` runs LLM-as-judge on input/output pairs and `find_problematic_node()` method traverses through the graph to figure out which node has the highest failure rate. Once it finds the problematic node, the algorithm stops and returns the result. 
 
-### Configuration
+You can look at the results of the algorithm.
+
+```python
+results.to_json()
+```
+```python
+Output: 
+
+{'root_cause': 'pii_insurance',
+ 'debug_path': ['summarizer', 'extractor', 'pii_insurance'],
+ 'node_results': {'summarizer': {'overall_failure_probability': 0.361,
+   'independent_failure_probability': 0.329,
+   'conditional_failure_probabilities': {'extractor': 0.476},
+   'dependencies': ['extractor'],
+   'is_root_cause': False},
+  'extractor': {'overall_failure_probability': 0.219,
+   'independent_failure_probability': 0.191,
+   'conditional_failure_probabilities': {'pii_insurance': 0.259},
+   'dependencies': ['pii_insurance'],
+   'is_root_cause': False},
+  'pii_insurance': {'overall_failure_probability': 0.27,
+   'independent_failure_probability': 0.285,
+   'conditional_failure_probabilities': {'pii_medications': 0.233},
+   'dependencies': ['pii_medications'],
+   'is_root_cause': True}}}
+```
+
+## Configuration
 
 SCIPE uses a YAML configuration file to set up your LLM graph evaluation. Here's an example of what your config.yaml might look like:
 
 ```yaml
 # Example config.yaml
 
-PATH_TO_APPLICATION_GRAPH_JSON: example_data/graph-healthcare.json
-PATH_TO_APPLICATION_RESPONSES: example_data/healthcare-responses.xlsx
+# Where to save the LLM as judge validations for further analysis
+PATH_TO_SAVE_VALIDATIONS: "validations.csv"
 
 # Mode name to use for LLM validations
 MODEL_NAME: claude-3-haiku-20240307
@@ -117,3 +156,6 @@ Here's a breakdown of how SCIPE approaches this problem:
 4. **Tracing**: As the algorithm traverses the graph from downstream to upstream, it maintains a debug path, providing insights into the flow of failures through the system. The analysis culminates in an `EvaluationResult` object, which includes the identified root cause, the debug path, and detailed results for each node. The results can be easily converted to a JSON format for further analysis or visualization.
 
 Overall, SCIPE analyzes independent and dependent failure probabilities to identify the most impactful problematic node in the system. This helps developers pinpoint and fix issues in their LLM-based application graph, improving overall performance and reliability.
+
+## Try it out
+Here's a colab notebook try out SCIPE on sample data - [demo.ipynb](https://colab.research.google.com/drive/1sM0rpxlMVAauJk6wGB-27WSlTyDnygag?usp=sharing)
