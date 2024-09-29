@@ -71,7 +71,7 @@ def calculate_probabilities(
     for dep in dependencies:
         dep_fails = data[dep.name] == False  # noqa: E712
         result = (node_fails & dep_fails).sum() / (dep_fails.sum() + EPSILON)
-        p_node_fails_given_dep_fails[dep.name] = result
+        p_node_fails_given_dep_fails[dep.name] = round(result, 3)
 
     return p_node_fails, p_independent_fail, p_node_fails_given_dep_fails
 
@@ -105,7 +105,7 @@ def find_root_cause(
         name=node,
         failure_prob=round(p_node_fails, 3),
         independent_failure_prob=round(p_independent_fail, 3),
-        dependent_failure_prob=round(p_node_fails_given_dep_fails, 3),
+        dependent_failure_prob={key: round(value, 3) for key, value in p_node_fails_given_dep_fails.items()},
         dependecies=[dep.name for dep in dependencies]
     )
     
