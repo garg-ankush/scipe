@@ -36,7 +36,7 @@ example_graph = convert_edges_to_dag(example_graph)
 ```
 
 ```python
-from scipe import LanggraphImprover
+from scipe import LLMEvaluator
 
 evaluator = LLMEvaluator(
   config_path="config.yml",
