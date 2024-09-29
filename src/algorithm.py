@@ -103,9 +103,9 @@ def find_root_cause(
     # Standardize results
     node_result = NodeResult(
         name=node,
-        failure_prob=p_node_fails,
-        independent_failure_prob=p_independent_fail,
-        dependent_failure_prob=p_node_fails_given_dep_fails,
+        failure_prob=round(p_node_fails, 3),
+        independent_failure_prob=round(p_independent_fail, 3),
+        dependent_failure_prob=round(p_node_fails_given_dep_fails, 3),
         dependecies=[dep.name for dep in dependencies]
     )
     
