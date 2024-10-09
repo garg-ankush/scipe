@@ -17,7 +17,7 @@ setup(
         "langchain-core==0.2.28",
         "langgraph==0.1.19",
         "ipykernel==5.5.6",
-        "pandas==2.1.4",
+        "pandas==2.2.2",
         "python-dotenv==1.0.1",
         "openpyxl==3.1.5",
         "litellm==1.46.5"
