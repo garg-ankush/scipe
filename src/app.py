@@ -1,5 +1,3 @@
-import yaml
-import os
 import pandas as pd
 from typing import Any, Dict
 from collections import defaultdict
@@ -8,7 +6,7 @@ from .algorithm import find_problematic_node
 
 
 class LLMEvaluator:
-    def __init__(self, config: dict, responses: pd.DataFrame, graph: defaultdict):
+    def __init__(self, config: Dict, responses: pd.DataFrame, graph: defaultdict):
         """LLM Evaluator for running LLM-based evaluations on application data
 
         Args:
@@ -16,7 +14,7 @@ class LLMEvaluator:
             responses (pd.DataFrame): Dataframe of responses from an application
             application_dag (defaultdict): Application dag with parent/child relationship
         """
-        self.config = self.config
+        self.config = config
         self.responses = responses
         self.graph = graph
         self._validations = None
