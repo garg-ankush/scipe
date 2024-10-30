@@ -1,6 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List
+from langgraph import graph
 
 
 class Node:
@@ -25,7 +26,8 @@ class Edge:
     conditional: None
 
 
-def convert_edges_to_dag(edges: List[Dict]) -> defaultdict:
+def convert_edges_to_dag(graph: graph) -> defaultdict:
+    edges = graph.to_json()['graph']['edges'] # Extract edges for source/target mapping from langgraph
     edges = [
         Edge(
             source=edge["source"],
