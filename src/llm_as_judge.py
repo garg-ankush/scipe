@@ -9,8 +9,7 @@ from typing import Annotated, TypedDict, Sequence
 from langchain_core.messages import BaseMessage
 from litellm import completion
 from tqdm.auto import tqdm
-from .prompt import construct_prompt
-
+from .helpers import construct_prompt
 
 load_dotenv()
 
@@ -24,8 +23,9 @@ class State(TypedDict):
     reason: Annotated[Sequence[BaseMessage], operator.add]
 
 class JudgeLLM:
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, prompt: str = None):
         self.model_name = model_name
+        self.prompt = prompt
 
     def validate_response(self, state: State):
         input = state["input"][-1]
@@ -33,13 +33,14 @@ class JudgeLLM:
 
         # Input: Input to the LLM
         # Output: LLM response
-        constructed_prompt = construct_prompt(
-            input, output, validation_key="validation", reason_key="reason"
-        )
+        if not self.prompt:
+            self.prompt = construct_prompt(
+                input, output, validation_key="validation", reason_key="reason"
+            )
         # Make a call to any LLM that LiteLLM supports
         response = completion(
             model=self.model_name,
-            messages=[{"role": "user", "content": constructed_prompt}],
+            messages=[{"role": "user", "content": self.prompt}],
             api_key=os.getenv("LLM_MODEL_API_KEY")
             )        
         content = json.loads(response.choices[0].message.content)
@@ -107,8 +108,8 @@ class JudgeLLM:
 
         return dict(results)
 
-def run_validations(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict):
-    llm_judge = JudgeLLM(model_name=model_name)
+def run_validations(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict, prompt=None):
+    llm_judge = JudgeLLM(model_name=model_name, prompt=prompt)
     
     evals = llm_judge.judge(
         dataframe=dataframe, 

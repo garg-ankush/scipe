@@ -2,7 +2,7 @@ import logging
 import pandas as pd
 from dataclasses import dataclass
 from typing import List, Dict, Tuple
-from .middleware import Node
+from .helpers import Node
 
 
 logging.basicConfig(level=logging.INFO)
