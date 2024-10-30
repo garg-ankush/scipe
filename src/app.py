@@ -8,29 +8,18 @@ from .algorithm import find_problematic_node
 
 
 class LLMEvaluator:
-    def __init__(self, config_path: str, responses: pd.DataFrame, graph: defaultdict):
+    def __init__(self, config: dict, responses: pd.DataFrame, graph: defaultdict):
         """LLM Evaluator for running LLM-based evaluations on application data
 
         Args:
-            config_path (str): Path to the config file
+            config (dict): Configuration dictionary 
             responses (pd.DataFrame): Dataframe of responses from an application
             application_dag (defaultdict): Application dag with parent/child relationship
         """
-        self.config_dir = os.path.dirname(config_path)
-        self.config = self._load_config(config_path)
+        self.config = self.config
         self.responses = responses
         self.graph = graph
         self._validations = None
-
-    def _load_config(self, config_path: str) -> Dict[str, Any]:
-        """
-        Load and return configs from a YAML file
-
-        Args:
-            config_path (str): Path to YAML configuration file
-        """
-        with open(config_path, 'r') as config_file:
-            return yaml.safe_load(config_file)
 
     def run_validation(self) -> None:
         """
@@ -41,7 +30,7 @@ class LLMEvaluator:
             Defaults to None.
         """
         if self.config["node_input_output_mappings"] is None:
-            raise ValueError("You must update node input and output names in the Config file.")
+            raise ValueError("You must update node input and output names in the config.")
         
         llm_validations = run_validations(
                 model_name=self.config["MODEL_NAME"],
