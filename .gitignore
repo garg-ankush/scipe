@@ -3,6 +3,7 @@ src/__pycache__
 build
 scipe.egg-info
 .env
+.venv
 scipe.egg-info/dependency_links.txt
 scipe.egg-info/PKG-INFO
 scipe.egg-info/requires.txt
