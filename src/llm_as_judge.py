@@ -23,7 +23,7 @@ class State(TypedDict):
     reason: Annotated[Sequence[BaseMessage], operator.add]
 
 class JudgeLLM:
-    def __init__(self, model_name: str, prompt: str = None):
+    def __init__(self, model_name: str, prompt: str):
         self.model_name = model_name
         self.prompt = prompt
 
@@ -33,18 +33,23 @@ class JudgeLLM:
 
         # Input: Input to the LLM
         # Output: LLM response
-        if not self.prompt:
-            self.prompt = construct_prompt(
-                input, output, validation_key="validation", reason_key="reason"
-            )
+        if self.prompt is not None:
+            # Using user's prompt
+            constructed_prompt = f"{self.prompt}\n\nInput: {input}\nOutput: {output}"
+        else:
+            # Using prebuilt prompt
+            constructed_prompt = construct_prompt(
+                input_=input, 
+                output_=output
+                )
+
         # Make a call to any LLM that LiteLLM supports
         response = completion(
             model=self.model_name,
-            messages=[{"role": "user", "content": self.prompt}],
+            messages=[{"role": "user", "content": constructed_prompt}],
             api_key=os.getenv("LLM_MODEL_API_KEY")
-            )        
+            )
         content = json.loads(response.choices[0].message.content)
-
         return {"output": [output], "validation": [content.get("validation")], "reason": [content.get("reason")]}
 
     def construct_validator_graph(self, State):
@@ -87,11 +92,10 @@ class JudgeLLM:
             json_data = row.to_dict()
             batch_id = json_data.get("batch_id", uuid.uuid4().hex)
             evaluations = []
-
             for node_name, (prompt_key, response_key) in node_input_output_mappings.items():
                 prompt_text = json_data.get(prompt_key, None)
                 output_text = json_data.get(response_key, None)
-
+        
                 evaluation = graph.invoke({
                     "input": [prompt_text],
                     "output": [output_text],
@@ -108,7 +112,7 @@ class JudgeLLM:
 
         return dict(results)
 
-def run_validations(model_name: str, dataframe=pd.DataFrame, node_input_output_mappings=dict, prompt=None):
+def run_validations(model_name: str, dataframe: pd.DataFrame, node_input_output_mappings: dict, prompt: str):
     llm_judge = JudgeLLM(model_name=model_name, prompt=prompt)
     
     evals = llm_judge.judge(
