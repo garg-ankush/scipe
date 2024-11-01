@@ -62,7 +62,7 @@ def convert_edges_to_dag(graph: graph) -> defaultdict:
 
     return nodes
 
-def construct_prompt(input_: str, output_: str):
+def construct_prompt(input_: str, output_: str, special_instructions=None):
     prompt = f"""You are a validator who is diligent and careful. When things are incorrect, you call it out and nothing gets past you.
         Given a input and ouput, your goal is to check if the output followed the directions in the input.
 
@@ -77,5 +77,12 @@ def construct_prompt(input_: str, output_: str):
 
         Input: {input_}
         Output: {output_} """
+    
+    if special_instructions is not None:
+        instructions = f"""
+
+        Please follow special instructions:\n{special_instructions}
+        """
+        prompt = prompt + instructions
     
     return prompt

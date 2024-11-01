@@ -19,7 +19,7 @@ class LLMEvaluator:
         self.graph = graph
         self._validations = None
 
-    def run_validation(self, prompt=None) -> None:
+    def run_validation(self, special_instructions=None) -> None:
         """
         Run LLM validation on the application responses
 
@@ -34,7 +34,7 @@ class LLMEvaluator:
                 model_name=self.config["MODEL_NAME"],
                 dataframe=self.responses,
                 node_input_output_mappings=self.config["node_input_output_mappings"],
-                prompt=prompt
+                special_instructions=special_instructions
                 )
 
         self.llm_validations = llm_validations

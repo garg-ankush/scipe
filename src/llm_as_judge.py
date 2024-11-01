@@ -23,9 +23,9 @@ class State(TypedDict):
     reason: Annotated[Sequence[BaseMessage], operator.add]
 
 class JudgeLLM:
-    def __init__(self, model_name: str, prompt: str):
+    def __init__(self, model_name: str, special_instructions: str):
         self.model_name = model_name
-        self.prompt = prompt
+        self.special_instructions = special_instructions
 
     def validate_response(self, state: State):
         input = state["input"][-1]
@@ -33,15 +33,11 @@ class JudgeLLM:
 
         # Input: Input to the LLM
         # Output: LLM response
-        if self.prompt is not None:
-            # Using user's prompt
-            constructed_prompt = f"{self.prompt}\n\nInput: {input}\nOutput: {output}"
-        else:
-            # Using prebuilt prompt
-            constructed_prompt = construct_prompt(
-                input_=input, 
-                output_=output
-                )
+        constructed_prompt = construct_prompt(
+            input_=input, 
+            output_=output,
+            special_instructions=self.special_instructions
+            )
 
         # Make a call to any LLM that LiteLLM supports
         response = completion(
@@ -112,8 +108,8 @@ class JudgeLLM:
 
         return dict(results)
 
-def run_validations(model_name: str, dataframe: pd.DataFrame, node_input_output_mappings: dict, prompt: str):
-    llm_judge = JudgeLLM(model_name=model_name, prompt=prompt)
+def run_validations(model_name: str, dataframe: pd.DataFrame, node_input_output_mappings: dict, special_instructions: str):
+    llm_judge = JudgeLLM(model_name=model_name, special_instructions=special_instructions)
     
     evals = llm_judge.judge(
         dataframe=dataframe, 
