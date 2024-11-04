@@ -158,4 +158,4 @@ Here's a breakdown of how SCIPE approaches this problem:
 Overall, SCIPE analyzes independent and dependent failure probabilities to identify the most impactful problematic node in the system. This helps developers pinpoint and fix issues in their LLM-based application graph, improving overall performance and reliability.
 
 ## Try it out
-Here's a colab notebook try out SCIPE on sample data - [demo.ipynb](https://colab.research.google.com/drive/1sM0rpxlMVAauJk6wGB-27WSlTyDnygag?usp=sharing)
+Here's a colab notebook try out SCIPE on sample data - [demo.ipynb](https://colab.research.google.com/drive/1INuL-6cQ-R9z4Clx9L8416ykv6XsRWwg#scrollTo=dY2N8o8o7Q2R)
