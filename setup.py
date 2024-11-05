@@ -25,5 +25,8 @@ setup(
         "openpyxl==3.1.5",
         "litellm==1.46.5"
     ],
+    extras_requires={
+        "dev": ["twine==5.1.1"]
+    },
     include_package_data=True
 )

@@ -1,6 +1,7 @@
 src/__pycache__
 .ruff_cache
 build
+dist
 scipe.egg-info
 .env
 .venv

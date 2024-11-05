@@ -17,7 +17,7 @@ As AI application developers, we often overlook the critical step of evaluating 
 ## Installation
 
 ```python
-pip install git+https://github.com/garg-ankush/scipe.git
+pip install scipe==1.0.0
 ```
 
 ## Getting Started
