@@ -6,7 +6,7 @@ with open("README.md", "r") as f:
 setup(
     name="scipe",
     version="1.0.0",
-    package_dir={"scipe": "src"},
+    package_dir={"scipe": "scipe"},
     packages=["scipe"],
     author="Ankush Garg",
     author_email="ankush-garg@berkeley.edu",
