@@ -1,4 +1,5 @@
 src/__pycache__
+.idea
 .ruff_cache
 build
 dist
