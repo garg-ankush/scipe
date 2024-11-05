@@ -1,5 +1,8 @@
 from setuptools import setup # type: ignore
 
+with open("README.md", "r") as f:
+    description = f.read()
+
 setup(
     name="scipe",
     version="1.0.0",
@@ -8,7 +11,7 @@ setup(
     author="Ankush Garg",
     author_email="ankush-garg@berkeley.edu",
     description="Systematic Chain Improvement and Problem Evaluation",
-    long_description="",
+    long_description=description,
     long_description_content_type="text/markdown",
     url="",
     python_requires=">=3.9",
